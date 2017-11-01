@@ -21,17 +21,16 @@ mybucket = s3.Bucket(S3_BUCKET_NAME)
 
 for s3_obj in mybucket.objects.filter(Prefix=S3_FOLDER_NAME):
 
-    if s3_obj.key
+    if re.match('.*\.csv$',s3_obj.key):
     
-    print(s3_obj)
-    
-#    try:
-#        #s3.Bucket(BUCKET_NAME).download_file(KEY, 'a.csv')
-#        #obj = s3.get_object(Bucket=S3_BUCKET_NAME, Key=KEY)
-#        df = pd.read_csv(io.BytesIO(obj['Body'].read()), encoding='utf8')
-#    except botocore.exceptions.ClientError as e:
-#        if e.response['Error']['Code'] == "404":
-#            print("The object does not exist.")
-#        else:
-#            raise
-#            
+        try:
+            #s3.Bucket(BUCKET_NAME).download_file(KEY, 'a.csv')
+            #obj = s3.O(s3_obj.bucket_name).obj, Key=s3_obj.key)
+            obj = s3.Object(s3_obj.bucket_name, s3_obj.key)
+            df = pd.read_csv(io.BytesIO(obj.get()['Body'].read()), encoding='utf8')
+        except botocore.exceptions.ClientError as e:
+            if e.response['Error']['Code'] == "404":
+                print("The object does not exist.")
+            else:
+                raise
+            
