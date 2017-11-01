@@ -1,42 +1,70 @@
+import argparse
 import io
 import re
 import pandas as pd
 import boto3
 import botocore
-from botocore import UNSIGNED
-from botocore.client import Config
 
-#BUCKET_NAME = 'https://s3-us-west-2.amazonaws.com/cauldron-workshop/data'
-S3_BUCKET_NAME = 'cauldron-workshop'
-S3_FOLDER_NAME='data'
-OUTPUT_CSV_NAME='web_traffic.csv'
+# parse command args to set run configuration
+parser = argparse.ArgumentParser(description='Transform raw web traffic data into a pivoted table of aggregated time per path by user.')
+parser.add_argument('bucket',type=str,
+                    help='Name of S3 bucket that contains web traffic data')
+parser.add_argument('--prefix',type=str,
+                    help='Prefix to filter S3 keys by')
+parser.add_argument('--output',type=str,
+                    help='Name of output CSV file')
 
-s3 = boto3.resource('s3', config=Config(signature_version=UNSIGNED))
+args = parser.parse_args()
 
-mybucket = s3.Bucket(S3_BUCKET_NAME)
+# set configuration variables from command line args
+S3_BUCKET_NAME = args.bucket
+if args.prefix:
+    S3_PREFIX=args.prefix
+else:
+    S3_PREFIX=''
+if args.output:
+    OUTPUT_CSV_NAME=args.output
+else:
+    OUTPUT_CSV_NAME='web_traffic.csv'
 
+# use the UNSIGNED signature version for anonymous access
+s3 = boto3.resource('s3', config=botocore.client.Config(signature_version=botocore.UNSIGNED))
+
+# set up objects to iterate through list of S3 objects
+s3_bucket = s3.Bucket(S3_BUCKET_NAME)
+
+if S3_PREFIX!='':
+    s3_bucket_objects = s3_bucket.objects.filter(Prefix=S3_PREFIX)
+else:
+    s3_bucket_objects = s3_bucket.objects.all()
+
+# list of dataframes created from the CSV files
 web_traffic_list = []
 
-for s3_obj in mybucket.objects.filter(Prefix=S3_FOLDER_NAME):
-
-    if re.match('.*\.csv$',s3_obj.key):
+# iterate through CSV files and parse them into dataframes
+try:
+    for s3_obj in s3_bucket_objects:
     
-        try:
-            #s3.Bucket(BUCKET_NAME).download_file(KEY, 'a.csv')
-            #obj = s3.O(s3_obj.bucket_name).obj, Key=s3_obj.key)
+        # only process CSV files
+        if re.match('.*\.csv$',s3_obj.key):
+        
             obj = s3.Object(s3_obj.bucket_name, s3_obj.key)
+            web_traffic_subset = pd.read_csv(io.BytesIO(obj.get()['Body'].read()), encoding='utf8')
+ 
+            # check structure and contents of dataframe
             
-            
-            df = pd.read_csv(io.BytesIO(obj.get()['Body'].read()), encoding='utf8')
-            
-            web_traffic_list.append(df)
-            
-        except botocore.exceptions.ClientError as e:
-            if e.response['Error']['Code'] == "404":
-                print("The object does not exist.")
-            else:
-                raise
+            if set(['user_id','path','length']).issubset(web_traffic_subset.columns):
+                
+                
+                
+                web_traffic_list.append(web_traffic_subset[['user_id','path','length']])
+                
+except botocore.exceptions.ClientError as e:
+    print(e.response['Error']['Message'])
+    exit()
 
+
+# check length of list
 web_traffic = pd.concat(web_traffic_list, ignore_index=True)
 
 web_traffic_user_path = web_traffic.groupby(['user_id','path'])['length'].sum()
