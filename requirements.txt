@@ -1,1 +1,4 @@
-pandas>=20
+pandas>=0.20.3
+boto3>=1.4.7
+botocore>=1.7.20
+

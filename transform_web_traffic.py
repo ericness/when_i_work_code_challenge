@@ -27,6 +27,8 @@ if args.output:
 else:
     OUTPUT_CSV_NAME='web_traffic.csv'
 
+# removes any corrupt data from web traffic dataframe and ensures data types
+# are correct
 def clean_web_traffic_data(web_traffic_df, s3_object_name):
 
     frame_size = len(web_traffic_df.index)
@@ -50,6 +52,7 @@ def clean_web_traffic_data(web_traffic_df, s3_object_name):
             print(f'{filter_count} rows filtered out of {s3_object_name} because of non-integer length.')
         
         web_traffic_df['length'] = web_traffic_df['length'].astype(int)
+    
     
 # use the UNSIGNED signature version for anonymous access
 s3 = boto3.resource('s3', config=botocore.client.Config(signature_version=botocore.UNSIGNED))
@@ -87,19 +90,27 @@ except botocore.exceptions.ClientError as e:
     print(e.response['Error']['Message'])
     exit()
 
+# make sure that at least one file was processed
+if len(web_traffic_list) == 0:
+    print("There are no CSV files with the proper structure to process")
+    exit()
 
-# check length of list
+# combine the dataframes from all the files into one large dataframe
 web_traffic = pd.concat(web_traffic_list, ignore_index=True)
 
+# aggregate the length of time that each user spent on each path
 web_traffic_user_path = web_traffic.groupby(['user_id','path'])['length'].sum()
 
+# pivot the table so that the path names are in columns
 web_traffic_user = web_traffic_user_path.reset_index()
-
-web_traffic_user['length'] = web_traffic_user['length'].astype('int')
 web_traffic_user = web_traffic_user.pivot(index='user_id',columns='path',values='length')
+
+# fill in any missing data with zeros
 web_traffic_user = web_traffic_user.fillna(0)
 
 # dtype converts to float when pivoting because of the presence of NaNs.
 # convert the data type back to int.
 web_traffic_user = web_traffic_user.astype(dtype='int')
+
+# output data to specified location
 web_traffic_user.to_csv(OUTPUT_CSV_NAME)
