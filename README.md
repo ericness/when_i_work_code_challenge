@@ -17,14 +17,14 @@ The input to the script are a set of comma-separated value (CSV) files. These fi
 Field | Data Type | Description
 --- | --- | ---
 user_id | integer | The unique identifier for the user visiting the page.
-path | string | The page within the website that the user visited. The field must be formatted as a slash followed by an identifier and optional additional pairs of slashes and identifiers. For example, `'/features/desktop'` is a valid path.
+path | string | The page within the website that the user visited. The field must be formatted as a slash followed by an identifier and optional additional pairs of slashes and identifiers. For example, `/features/desktop` is a valid path.
 length | integer | The length of time the user spent on the page in seconds.
 
 Any additional fields in the CSV file will be ignored. These three columns are required for the CSV file to be processed. Any records in the CSV files that have malformed `path` fields or non-integer `length` fields will be ignored.
 
 # Execution
 
-The script has several arguments that control its execution. To see the help section for running the `transform_web_traffic.py` script, use the command:
+The script has several arguments that control its execution. To see the help document for running the `transform_web_traffic.py` script, use the command:
 
 ```bash
 python transform_web_traffic.py -h
@@ -54,4 +54,4 @@ user_id | /about | /features/desktop | /tutorial/step-four
 3 | 18 | 155 | 31
 10 | 95 | 281 | 0
 
-This file can be imported into Excel or other business intelligence tools such as Tableau for further processing.
+This file can be imported into Excel or other business intelligence tools such as Tableau for further analysis.
