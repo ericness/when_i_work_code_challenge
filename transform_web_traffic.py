@@ -27,14 +27,19 @@ if args.output:
 else:
     OUTPUT_CSV_NAME='web_traffic.csv'
 
-# removes any corrupt data from web traffic dataframe and ensures data types
-# are correct
 def clean_web_traffic_data(web_traffic_df, s3_object_name):
 
+    """Return a dataframe with any corrupt data removed and data types
+    corrected.
+    
+    web_traffic_df - dataframe with fields path, user_id and length
+    s3_object_name - name of source file to use in status messages
+    """
+    
     frame_size = len(web_traffic_df.index)
 
     # check that format of path is valid. remove any invalid rows.
-    web_traffic_df = web_traffic_df[web_traffic_df['path'].str.match('^(/\w*)+')==True]
+    web_traffic_df = web_traffic_df[web_traffic_df['path'].str.match('^(/[\w-]*)+\s*$')==True]
     
     filter_count = frame_size - len(web_traffic_df.index)
     
@@ -44,14 +49,16 @@ def clean_web_traffic_data(web_traffic_df, s3_object_name):
     
     # check that all length values are integers
     if web_traffic_df['length'].dtype != 'int64':
-        web_traffic_df = web_traffic_df[web_traffic_df['length'].to_string().str.isdigit()==True]
+        web_traffic_df = web_traffic_df[web_traffic_df['length'].astype('str').str.isdigit()==True]
  
         filter_count = frame_size - len(web_traffic_df.index)
     
         if filter_count != 0:
-            print(f'{filter_count} rows filtered out of {s3_object_name} because of non-integer length.')
+            print(f'{filter_count} rows filtered out of {s3_object_name} because field length is non-integer.')
         
         web_traffic_df['length'] = web_traffic_df['length'].astype(int)
+   
+    return web_traffic_df
     
     
 # use the UNSIGNED signature version for anonymous access
@@ -68,6 +75,8 @@ else:
 # list of dataframes created from the CSV files
 web_traffic_list = []
 
+print(f'Getting list of CSV files to process')
+
 # iterate through CSV files and parse them into dataframes
 try:
     for s3_obj in s3_bucket_objects:
@@ -77,10 +86,12 @@ try:
         
             obj = s3.Object(s3_obj.bucket_name, s3_obj.key)
             web_traffic_subset = pd.read_csv(io.BytesIO(obj.get()['Body'].read()), encoding='utf8')
+
+            print(f'Processing file {s3_obj.key}')
  
             # check structure and contents of dataframe            
             if set(['user_id','path','length']).issubset(web_traffic_subset.columns):
-                clean_web_traffic_data(web_traffic_subset, s3_obj.key)
+                web_traffic_subset = clean_web_traffic_data(web_traffic_subset, s3_obj.key)
                 
                 web_traffic_list.append(web_traffic_subset[['user_id','path','length']])
             else:
@@ -92,8 +103,10 @@ except botocore.exceptions.ClientError as e:
 
 # make sure that at least one file was processed
 if len(web_traffic_list) == 0:
-    print("There are no CSV files with the proper structure to process")
+    print(f'There are no CSV files with the proper structure to process')
     exit()
+
+print(f'All files have been ingested. Beginning data transformation.')
 
 # combine the dataframes from all the files into one large dataframe
 web_traffic = pd.concat(web_traffic_list, ignore_index=True)
@@ -112,5 +125,9 @@ web_traffic_user = web_traffic_user.fillna(0)
 # convert the data type back to int.
 web_traffic_user = web_traffic_user.astype(dtype='int')
 
+print(f'Writing transformed data to file {OUTPUT_CSV_NAME}')
+
 # output data to specified location
 web_traffic_user.to_csv(OUTPUT_CSV_NAME)
+
+print(f'Done!')
