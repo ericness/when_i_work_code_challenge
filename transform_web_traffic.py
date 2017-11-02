@@ -6,9 +6,9 @@ import boto3
 import botocore
 
 # parse command args to set run configuration
-parser = argparse.ArgumentParser(description='Transform raw web traffic data \
-                                 into a pivoted table of aggregated time per \
-                                 path by user.')
+parser = argparse.ArgumentParser(description=('Transform raw web traffic data '
+                                 'into a pivoted table of aggregated time per '
+                                 'path by user.'))
 parser.add_argument('bucket', type=str,
                     help='Name of S3 bucket that contains web traffic data')
 parser.add_argument('--prefix', type=str,
@@ -48,8 +48,8 @@ def clean_web_traffic_data(web_traffic_df, s3_object_name):
     filter_count = frame_size - len(web_traffic_df.index)
     
     if filter_count != 0:
-        print(f'{filter_count} rows filtered out of {s3_object_name} because \
-of invalid path formats.')
+        print(f'{filter_count} rows filtered out of {s3_object_name} because '
+              f'of invalid path formats.')
         frame_size = len(web_traffic_df.index)
 
     # check that all length values are integers
@@ -60,8 +60,8 @@ of invalid path formats.')
         filter_count = frame_size - len(web_traffic_df.index)
 
         if filter_count != 0:
-            print(f'{filter_count} rows filtered out of {s3_object_name} \
-because field length is non-integer.')
+            print(f'{filter_count} rows filtered out of {s3_object_name} '
+                  f'because field length is non-integer.')
 
         web_traffic_df['length'] = web_traffic_df['length'].astype(int)
    
@@ -83,7 +83,7 @@ else:
 # list of dataframes created from the CSV files
 web_traffic_list = []
 
-print(f'Getting list of CSV files to process')
+print(f'Getting list of CSV files to process.')
 
 # iterate through CSV files and parse them into dataframes
 try:
@@ -96,7 +96,7 @@ try:
             web_traffic_subset = pd.read_csv(io.BytesIO(obj.get()['Body'].
                                              read()), encoding='utf8')
 
-            print(f'Processing file {s3_obj.key}')
+            print(f'Processing file {s3_obj.key}.')
  
             # check structure and contents of dataframe            
             if set(['user_id','path','length']).issubset(web_traffic_subset.
@@ -107,8 +107,8 @@ try:
                 web_traffic_list.append(web_traffic_subset[['user_id','path',
                                                             'length']])
             else:
-                print(f'Data in file {s3_obj.key} was skipped because it does \
-                      not contain fields user_id, path and length')
+                print(f'Data in file {s3_obj.key} was skipped because it does '
+                      f'not contain fields user_id, path and length.')
                 
 except botocore.exceptions.ClientError as e:
     print(e.response['Error']['Message'])
@@ -116,7 +116,7 @@ except botocore.exceptions.ClientError as e:
 
 # make sure that at least one file was processed
 if len(web_traffic_list) == 0:
-    print(f'There are no CSV files with the proper structure to process')
+    print(f'There are no CSV files with the proper structure to process.')
     exit()
 
 print(f'All files have been ingested. Beginning data transformation.')
@@ -139,7 +139,7 @@ web_traffic_user = web_traffic_user.fillna(0)
 # convert the data type back to int.
 web_traffic_user = web_traffic_user.astype(dtype='int')
 
-print(f'Writing transformed data to file {OUTPUT_CSV_NAME}')
+print(f'Writing transformed data to file {OUTPUT_CSV_NAME}.')
 
 # output data to specified location
 web_traffic_user.to_csv(OUTPUT_CSV_NAME)
