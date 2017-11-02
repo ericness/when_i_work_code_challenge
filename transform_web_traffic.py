@@ -90,7 +90,7 @@ try:
     for s3_obj in s3_bucket_objects:
     
         # only process CSV files
-        if re.match('.*\.csv$',s3_obj.key):
+        if re.match('.*\.csv$', s3_obj.key):
         
             obj = s3.Object(s3_obj.bucket_name, s3_obj.key)
             web_traffic_subset = pd.read_csv(io.BytesIO(obj.get()['Body'].
@@ -98,13 +98,13 @@ try:
 
             print(f'Processing file {s3_obj.key}.')
  
-            # check structure and contents of dataframe            
-            if set(['user_id','path','length']).issubset(web_traffic_subset.
-                  columns):
+            # check structure and contents of dataframe
+            if set(['user_id', 'path', 'length']).issubset(web_traffic_subset.
+                                                           columns):
                 web_traffic_subset = clean_web_traffic_data(web_traffic_subset,
                                                             s3_obj.key)
                 
-                web_traffic_list.append(web_traffic_subset[['user_id','path',
+                web_traffic_list.append(web_traffic_subset[['user_id', 'path',
                                                             'length']])
             else:
                 print(f'Data in file {s3_obj.key} was skipped because it does '
@@ -129,7 +129,7 @@ web_traffic_user_path = web_traffic.groupby(['user_id','path'])['length'].sum()
 
 # pivot the table so that the path names are in columns
 web_traffic_user = web_traffic_user_path.reset_index()
-web_traffic_user = web_traffic_user.pivot(index='user_id',columns='path',
+web_traffic_user = web_traffic_user.pivot(index='user_id', columns='path',
                                           values='length')
 
 # fill in any missing data with zeros
