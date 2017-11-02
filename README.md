@@ -46,7 +46,7 @@ python transform_web_traffic.py cauldron-workshop --prefix data --output process
 
 # Output
 
-The output CSV file is a pivot table with `user_id` as the row label, `path` as the column label and the sum of `length` in each cell. An example of a small output file is:
+The output CSV file is a pivot table with `user_id` as the row label, `path` as the column label and the sum of `length` in each cell. The number of columns in the output file varies with the set of paths that exist in the input files. An example of a small output file is:
 
 user_id | /about | /features/desktop | /tutorial/step-four
 --- | --- | --- | ---
